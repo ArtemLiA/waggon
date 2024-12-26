@@ -31,3 +31,22 @@ def create_dir(func, acqf_name, surr_name, base_dir='test_results'):
         os.mkdir(res_path)
     
     return res_path
+
+
+class PyXABFunctionWrapper:
+    def __init__(self, func):
+        """
+        Wrapper over waggon.functions.Function objects for multi-armed bandits
+        optimization using PyXAB library.
+        """
+        self.func = func
+    
+    def __call__(self, x: list):
+        x_t = np.expand_dims(x, 0)
+        reward = -self.func(x_t)
+        
+        # A crutch, will be removed in future
+        if reward.size > 1:
+            raise ValueError("Reward must be 1d-array!")
+
+        return reward.flatten()[0]
