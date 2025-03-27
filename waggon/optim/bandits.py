@@ -93,16 +93,29 @@ class PyXABOptimizer(Optimiser):
         best_point = self.algo.get_last_point()
         return np.array(best_point)
     
-    def compute_error(self, x_best, y_best) -> float:
+    def compute_error(self, x_best, y_best):
         x_glob_min = self.func.glob_min
         y_glob_min = self.func(np.expand_dims(x_glob_min, 0)).flatten()
 
+        if x_glob_min.ndim == 1:
+            x_glob_min = x_glob_min[np.newaxis]
+
         if self.error_type == 'x':
-            return np.linalg.norm(x_glob_min - x_best)
-        elif self.error_type == 'y':
+            return np.linalg.norm(x_glob_min - x_best, axis=1).min()
+
+        y_glob_min = self.func(x_glob_min)
+
+        if y_glob_min.ndim == 2:
+            y_glob_min = y_glob_min[0]
+        
+        if self.func.log_transform:
+            y_best = np.exp(y_best) + self.func.log_eps
+            y_glob_min = np.exp(y_glob_min) + self.func.log_eps
+
+        if self.error_type == 'f':
             return np.linalg.norm(y_glob_min - y_best)
-        else:
-            raise ValueError(f"Unsupported error type: {self.error_type}") 
+
+        raise ValueError(f"Unsupported error type: {self.error_type}")
     
     def evaluate(self, x_best) -> float:
         y_best = self.func(np.expand_dims(x_best, 0)).flatten()
