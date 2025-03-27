@@ -19,8 +19,16 @@ def test():
     parser.add_argument(
         '-f', '--function', 
         help='Function to optimize', 
-        default='levi',
-        choices=['thc', 'ackley', 'levi', 'himmelblau', 'rosenbrock', 'tang', 'holder']
+        default='thc',
+        choices=[
+            'thc', 
+            'ackley', 
+            'levi', 
+            'himmelblau', 
+            'rosenbrock', 
+            'tang', 
+            'holder'
+        ]
     )
     parser.add_argument(
         '-a', '--algorithm',
@@ -82,6 +90,12 @@ def test():
         default=1e-1, 
         type=float
     )
+    parser.add_argument(
+        '--max_iter',
+        help="Maximum number of iterations",
+        default=1000,
+        type=int
+    )
 
     args = parser.parse_args()
 
@@ -101,10 +115,15 @@ def test():
         eps = args.epsilon
 
         bandit = PyXABOptimizer(
-            func=func, algo=algo, partition=partition, eps=eps
+            func=func, algo=algo, partition=partition, eps=eps, max_iter=args.max_iter
         )
         bandit.optimise()
-    
+
+        print(f"Iterations: {bandit.res.size}")
+        print(f"Minimum: {bandit.params[-1]}")
+        print(f"Func min: {func.glob_min}")
+        print(f"Error: {bandit.errors[-1]}")
+        print()
 
 if __name__ == "__main__":
     test()
