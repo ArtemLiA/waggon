@@ -1,7 +1,62 @@
+from typing import Tuple
+import warnings
+
+import GPy # TODO: remove it
+import numpy as np
+
+import torch
+
+import botorch.models as bmodels
+import botorch.fit as bfit
+import gpytorch.mlls as gmlls
+
 from .base import Surrogate
 
-import GPy
-import numpy as np
+
+class GaussianProcess(Surrogate):
+    def __init__(self):
+        self._model = None
+        self._mll = None
+    
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+        if y.ndim == 1:
+            y = np.expand_dims(y, 1)
+
+        train_X = torch.from_numpy(X).double()
+        train_Y = torch.from_numpy(y).double()
+
+        self._model = bmodels.SingleTaskGP(
+            train_X=train_X,
+            train_Y=train_Y
+        )
+        self._mll = gmlls.ExactMarginalLogLikelihood(
+            likelihood=self._model.likelihood,
+            model=self._model
+        )
+        bfit.fit_gpytorch_mll(self._mll)
+
+    def predict(self, X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        if self._model is None:
+            raise ValueError("Model is not fitted!")
+
+        X_data = torch.from_numpy(X).double()
+        mult_norm = self._model(X_data) # gpytorch.distibutions.MultivariateNormal
+        
+        mu = mult_norm.loc.detach().numpy()
+        std = mult_norm.stddev.detach().numpy()
+
+        return mu, std
+    
+    @property
+    def model(self) -> bmodels.SingleTaskGP | None:
+        if self._model is None:
+            warnings.warn(
+                "BoTorch model of GP is not initialized!",
+                category=UserWarning
+            )
+
+        return self._model
+    
 
 class GP(Surrogate):
     def __init__(self, **kwargs):
@@ -39,3 +94,4 @@ class GP(Surrogate):
         std *= self.std
 
         return f.astype(np.float64), std.astype(np.float64)
+    

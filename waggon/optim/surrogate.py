@@ -1,3 +1,5 @@
+from typing import Optional
+
 import gc
 import time
 import pickle
@@ -9,6 +11,8 @@ from joblib import Parallel, delayed
 
 from .base import Optimiser
 from .utils import create_dir
+
+from ..surrogates.gp import GaussianProcess
 
 
 class SurrogateOptimiser(Optimiser):
@@ -91,11 +95,12 @@ class SurrogateOptimiser(Optimiser):
         else:
             self.surr.verbose   = self.verbose
     
-    
     def run_lbfgsb(self, x0):
         opt_res = minimize(method='L-BFGS-B', fun=self.acqf, x0=x0, bounds=self.func.domain, tol=self.num_opt_tol, options={'disp': self.num_opt_disp})
         return opt_res.fun, opt_res.x
-    
+
+    def _optimize_gp_acqf(self, x0: Optional[np.ndarray] = None):
+        pass
 
     def numerical_search(self, x0=None):
         '''
@@ -152,7 +157,6 @@ class SurrogateOptimiser(Optimiser):
             f, x = np.array(f), np.array(x)
 
             return x[np.argmin(f)]
-    
 
     def predict(self, X, y):
         '''
@@ -179,7 +183,7 @@ class SurrogateOptimiser(Optimiser):
         self.acqf.y = y.reshape(y.shape[0]//self.func.n_obs, self.func.n_obs)
         self.acqf.conds = X[::self.func.n_obs]
         self.acqf.surr = self.surr
-            
+        
         next_x = self.numerical_search(x0=X[np.argmin(y)])
 
         if np.any(np.linalg.norm(X - next_x, axis=-1) < 1e-6):
@@ -193,7 +197,6 @@ class SurrogateOptimiser(Optimiser):
         
         return np.array([next_x])
     
-    
     def _save(self, base_dir='test_results'):
         res_path = create_dir(self.func, self.acqf.name, self.surr.name, base_dir=base_dir)
 
@@ -204,7 +207,6 @@ class SurrogateOptimiser(Optimiser):
         with open(f'{res_path}/{time.strftime("%d_%m_%H_%M_%S")}.pkl', 'wb') as f:
             pickle.dump(res, f)
     
-
     def plot_iteration_results(self, X, next_x):
         '''
         For surrogate optimiser only.
@@ -254,4 +256,3 @@ class SurrogateOptimiser(Optimiser):
             plt.tight_layout()
         
         plt.show()
-

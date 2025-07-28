@@ -21,7 +21,7 @@ class Acquisition:
         self.surr  = None
         self.conds = None
     
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         '''
         Call of the acquisition function.
 
